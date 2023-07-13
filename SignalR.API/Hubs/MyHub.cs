@@ -27,5 +27,19 @@ namespace SignalR.API.Hubs
         {
             await Clients.All.SendAsync("RecieveNames", Names);
         }
+
+        public override async Task OnConnectedAsync()
+        {
+            ClientCount++;
+            await Clients.All.SendAsync("RecieveClientCount", ClientCount);
+            await base.OnConnectedAsync();
+        }
+
+        public override async Task OnDisconnectedAsync(Exception exception)
+        {
+            ClientCount--;
+            await Clients.All.SendAsync("RecieveClientCount", ClientCount);
+            await base.OnDisconnectedAsync(exception);
+        }
     }
 }
