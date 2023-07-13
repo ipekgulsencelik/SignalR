@@ -4,28 +4,64 @@
 
 @section Scripts{
     <script src="~/microsoft/signalr/dist/browser/signalr.min.js"></script>
-   
+
     <script type="text/javascript">
-        $(document).ready(()=>{
+        $(document).ready(() => {
             var connection = new signalR.HubConnectionBuilder().withUrl("https://localhost:7100/MyHub").build();
-                connection.start().then(()=>{
-                    $("#conStatus").text(connection.connectionState);
-                    connection.invoke("GetNames");
+            connection.start().then(() => {
+                $("#conStatus").text(connection.connectionState);
+                connection.invoke("GetNames");
 
-                    $("#btnSaveName").click(()=>{
-                        connection.invoke("SendName",$("#txtName").val());
-                    });
-
-                    connection.on("RecieveName",(name)=>{
-                        console.log(name);
-                        $("#nameslist").append(`<li class="list-group-item">${name}</li>`)
-                    });
-
-                     connection.on("RecieveClientCount",(clientCount)=>{
-                         $("#clientCount").text(clientCount);
-                    });
-
+                $("#btnSaveName").click(() => {
+                    connection.invoke("SendName", $("#txtName").val());
                 });
+
+                connection.on("RecieveName", (name) => {
+                    console.log(name);
+                    $("#nameslist").append(`<li class="list-group-item">${name}</li>`)
+                });
+
+                connection.on("RecieveClientCount", (clientCount) => {
+                    $("#clientCount").text(clientCount);
+                });
+
+                connection.on("RecieveNames", (names) => {
+                    $("#nameslist").empty();
+                    names.forEach((item, index) => {
+                        $("#nameslist").append(`<li class="list-group-item">${name}</li>`);
+                    });
+                });
+
+                $("#btnSaveRoom").click(() => {
+                    let userName = $("#txtName").val();
+                    let roomName = $("input[type=radio]:checked").val();
+                    if (roomName == null) {
+                        alert("Lütfen Şehir Seçiniz");
+                        return;
+                    }
+                    connection.invoke("SendNameByGroup", userName, roomName);
+                })
+
+                connection.on("ReceiveMessageByGroup", (userName, roomID) => {
+                    let listName;
+                    if (roomID == 1)
+                        listName = "ankaraRoomList";
+                    else
+                        listName = "bursaRoomList";
+                    $(`#${listName}`).append(`<li class="list-group-item">${userName}</li>`);
+                })
+
+                $("input[type=radio]").change(() => {
+                    let value = $(`input[type=radio]:checked`).val();
+                    if (value == "Ankara") {
+                        connection.invoke("AddToGroup", value);
+                        connection.invoke("RemoveToGroup", "Bursa")
+                    } else {
+                        connection.invoke("AddToGroup", value);
+                        connection.invoke("RemoveToGroup", "Ankara")
+                    }
+                })
+            });
         })
     </script>
 }

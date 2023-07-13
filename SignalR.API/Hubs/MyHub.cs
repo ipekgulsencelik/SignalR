@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using SignalR.API.Models;
 
 namespace SignalR.API.Hubs
@@ -40,6 +41,45 @@ namespace SignalR.API.Hubs
             ClientCount--;
             await Clients.All.SendAsync("RecieveClientCount", ClientCount);
             await base.OnDisconnectedAsync(exception);
+        }
+
+        public async Task SendNameByGroup(string userName, string roomName)
+        {
+            var room = _context.Rooms.Where(x => x.RoomName == roomName).FirstOrDefault();
+            if (room != null)
+            {
+                room.Users.Add(new User { UserName = userName });
+            }
+            else
+            {
+                var newRoom = new Room { RoomName = roomName };
+                newRoom.Users.Add(new User { UserName = userName });
+                _context.Rooms.Add(newRoom);
+            }
+
+            await _context.SaveChangesAsync();
+            await Clients.Group(roomName).SendAsync("ReceiveMessageByGroup", userName, room.RoomID);
+        }
+
+        public async Task GetNamesByGroup()
+        {
+            var rooms = _context.Rooms.Include(x => x.Users).Select(y => new
+            {
+                roomID = y.RoomID,
+                users = y.Users.ToList()
+            });
+
+            await Clients.All.SendAsync("ReceiveNamesByGroup", rooms);
+        }
+
+        public async Task AddToGroup(string roomName)
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, roomName);
+        }
+
+        public async Task RemoveToGroup(string roomName)
+        {
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomName);
         }
     }
 }
